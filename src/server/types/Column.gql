@@ -1,0 +1,9 @@
+type Column {
+  name: String!
+  type: String
+  sortable:Boolean
+}
+
+type Query {
+  getColumns(model:String!): [Column]
+}

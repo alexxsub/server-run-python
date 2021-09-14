@@ -1,0 +1,14 @@
+type Data {
+  name: String
+  admin: String
+  director: String
+  manager: String
+}
+type Query {
+  getData: [Data]
+  getData2: [Data]
+}
+type Mutation {
+  add(records: Int): Data
+  clear: Data
+}

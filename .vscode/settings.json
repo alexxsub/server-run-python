@@ -1,0 +1,11 @@
+{
+  "vetur.validation.template": false,
+  "vetur.format.enable": true,
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "vue"],
+  "typescript.validate.enable": false,
+  "vetur.experimental.templateInterpolationService": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "files.trimTrailingWhitespace": true
+}

@@ -1,0 +1,59 @@
+enum Role {
+  admin
+  director
+  manager
+}
+type User {
+  _id: ID
+  avatar: String
+  username: String!
+  fullname: String
+  email: String
+  password: String
+  roles: [Role]
+  enabled: Boolean
+  createdDate: String
+}
+input inputUser {
+  _id: ID
+  avatar: String
+  username: String
+  fullname: String
+  email: String
+  roles: [Role]
+  enabled: Boolean
+}
+input inputProfile {
+  _id: ID
+  avatar: String
+  username: String
+  fullname: String
+  email: String
+  changepassword: Boolean
+  oldpassword: String
+  newpassword: String
+}
+type Token {
+  token: String!
+}
+
+type  Users{
+  docs: [User]
+  page:Int
+  rowsPerPage:Int
+  rowsNumber: Int
+}
+type Query {
+  getCurrentUser: User
+  getUsers: [User]
+  getUsers2: Users
+}
+
+type Mutation {
+  modifyProfile(input: inputProfile!): User
+  modifyUser(input: inputUser!): User
+  deleteUser(_id: ID!): User
+  enabledUser(_id: ID!, enabled: Boolean!): User
+  signIn(username: String!, password: String!): Token
+  signUp(username: String!, email: String!, password: String!): User
+}
