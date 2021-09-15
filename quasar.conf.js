@@ -20,7 +20,8 @@ module.exports = function (/* ctx */) {
     // https://quasar.dev/quasar-cli/boot-files
     boot: [
 
-      'i18n'
+      'i18n',
+      'jquery'
     ],
 
     // https://quasar.dev/quasar-cli/quasar-conf-js#Property%3A-css

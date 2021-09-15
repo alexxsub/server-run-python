@@ -24,6 +24,8 @@
     "express-fileupload": "^1.2.0",
     "graphql": "^15.5.1",
     "graphql-tools": "^6.2.4",
+    "iconv-lite": "^0.6.3",
+    "jquery": "^3.6.0",
     "jsonsave": "^3.0.5",
     "jsonwebtoken": "^8.5.1",
     "loadash": "^1.0.0",

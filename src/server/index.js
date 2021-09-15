@@ -10,7 +10,9 @@ const app = require('express')(),
   jwt = require('jsonwebtoken'),
   typeDefs = require('./types'),
   resolvers = require('./resolvers'),
-  context = require('./models')
+  context = require('./models'),
+  http = require('http'),
+  WebSocket = require('ws')
 
 require('dotenv').config({ path: '../../.env' })
 const port = process.env.PORT || 8080
@@ -52,7 +54,7 @@ app.use(fileUpload({
 }))
 // Create Apollo/GraphQL Server using typeDefs, resolvers
 
-const server = new ApolloServer({
+const apollo = new ApolloServer({
   typeDefs,
   resolvers,
   tracing: true,
@@ -103,6 +105,10 @@ const contextAuthError = (req, res, next) => {
   }
   next()
 }
+// eslint-disable-next-line no-unused-vars
+const server = http.createServer(app)
+const wss = new WebSocket.Server({ server })
+
 // add other middleware
 app.use(express.static('uploads'))
 app.use(cors())
@@ -170,8 +176,62 @@ app.post('/upload2', async (req, res, next) => {
     })
   }
 })
+const SCRIPT_PATH = path.join(__dirname, 'scripts/calc.py')
+
+app.get('/run', function (req, res) {
+  const scriptProcess = spawn('python', [
+    SCRIPT_PATH,
+    '-a', req.query.a, '-b', req.query.b
+  ])
+  var t = 'text/plain'
+  if (platform === 'win32') t += '; charset=cp1251'
+  res.set('Content-Type', t)
+  scriptProcess.stdout.pipe(res)
+  scriptProcess.stderr.pipe(res)
+})
 // start app
-server.applyMiddleware({ app, path: '/api' })
-app.listen(port, () =>
-  console.log(`🚀  Started at http://localhost:${port}${server.graphqlPath}`)
+apollo.applyMiddleware({ app, path: '/api' })
+server.listen(port, () =>
+  console.log(`🚀  Started at http://localhost:${port}${apollo.graphqlPath}`)
 )
+const iconv = require('iconv-lite'),
+  { platform } = require('process'),
+  { spawn } = require('child_process')
+
+function runScriptInWebsocket (ws, a, b) {
+  var options = ['-u', SCRIPT_PATH]
+  options.push('-a', a, '-b', b)
+
+  const child = spawn('python', options)
+
+  child.stdout.on('data', function (data) {
+    if (platform === 'win32') { data = iconv.decode(data, 'cp1251') }
+    ws.send(`>:${data}`)
+  })
+  child.stderr.on('data', function (data) {
+    ws.send(`>:${data}`)
+  })
+  child.on('close', function () {
+    ws.send('>:done\n')
+  })
+  child.on('exit', function (code, signal) {
+    if (code !== 0) {
+      ws.send(`>:Exit code ${code}\n`)
+      ws.send(`>:Exit signal ${signal}\n`)
+    }
+  })
+}
+
+wss.on('connection', (ws) => {
+  console.log('😁  WebSocket server connected ')
+
+  ws.on('message', (msg) => {
+    ws.send(`You sent -> ${msg}\n`)
+    msg = JSON.parse(msg)
+
+    if (msg.cmd === 'run') {
+      runScriptInWebsocket(ws, msg.a, msg.b)
+    }
+  })
+  ws.send('Connection with WebSocket server initialized\n')
+})

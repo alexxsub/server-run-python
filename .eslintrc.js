@@ -12,6 +12,7 @@ module.exports = {
 
   env: {
     browser: true
+
   },
 
   // Rules order is important, please avoid shuffling them
@@ -44,7 +45,8 @@ module.exports = {
     __statics: true,
     process: true,
     Capacitor: true,
-    chrome: true
+    chrome: true,
+    "$": true
   },
 
   // add your custom rules here
