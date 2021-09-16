@@ -16,7 +16,6 @@ const app = require('express')(),
 
 require('dotenv').config({ path: '../../.env' })
 const port = process.env.PORT || 8080
-
 mongoose
   .connect(
     process.env.MONGO_URI,
@@ -105,9 +104,8 @@ const contextAuthError = (req, res, next) => {
   }
   next()
 }
-// eslint-disable-next-line no-unused-vars
+
 const server = http.createServer(app)
-const wss = new WebSocket.Server({ server })
 
 // add other middleware
 app.use(express.static('uploads'))
@@ -178,22 +176,58 @@ app.post('/upload2', async (req, res, next) => {
 })
 const SCRIPT_PATH = path.join(__dirname, 'scripts/calc.py')
 
+app.get('/sse', function (req, res) {
+  res.writeHead(200, {
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Origin': 'http://localhost:8080',
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache'
+  })
+
+  var options = ['-u', SCRIPT_PATH]
+  options.push('-a', req.query.a, '-b', req.query.b)
+  const child = spawn('python', options)
+
+  child.stdout.on('data', function (data) {
+    if (platform === 'win32') { data = iconv.decode(data, 'cp1251') }
+    res.write(`data:${data} \n\n`)
+  })
+
+  child.stderr.on('data', function (data) {
+    res.write(`event: error\ndata: Error ${data} \n\n`)
+  })
+  child.on('close', function () {
+    console.log('done ')
+    res.write('event: done\ndata: \n\n')
+    res.end()
+  })
+  child.on('exit', function (code, signal) {
+    if (code !== 0) {
+      res.write(`data: Exit code ${code}\n\n`)
+      res.write(`data: Exit signal ${signal}\n\n`)
+    }
+  })
+})
+
 app.get('/run', function (req, res) {
   const scriptProcess = spawn('python', [
     SCRIPT_PATH,
     '-a', req.query.a, '-b', req.query.b
   ])
-  var t = 'text/plain'
-  if (platform === 'win32') t += '; charset=cp1251'
-  res.set('Content-Type', t)
+
+  res.set('Content-Type', (platform === 'win32' ? 'text/plain; charset=cp1251' : 'text/plain'))
   scriptProcess.stdout.pipe(res)
   scriptProcess.stderr.pipe(res)
 })
-// start app
+// start app ------------------------------------------------
 apollo.applyMiddleware({ app, path: '/api' })
 server.listen(port, () =>
   console.log(`🚀  Started at http://localhost:${port}${apollo.graphqlPath}`)
 )
+
+// websocket -------------------------------------------------
+const wss = new WebSocket.Server({ server })
+
 const iconv = require('iconv-lite'),
   { platform } = require('process'),
   { spawn } = require('child_process')
@@ -206,18 +240,18 @@ function runScriptInWebsocket (ws, a, b) {
 
   child.stdout.on('data', function (data) {
     if (platform === 'win32') { data = iconv.decode(data, 'cp1251') }
-    ws.send(`>:${data}`)
+    ws.send(`${data}`)
   })
   child.stderr.on('data', function (data) {
-    ws.send(`>:${data}`)
+    ws.send(`${data}`)
   })
   child.on('close', function () {
-    ws.send('>:done\n')
+    ws.send('done')
   })
   child.on('exit', function (code, signal) {
     if (code !== 0) {
-      ws.send(`>:Exit code ${code}\n`)
-      ws.send(`>:Exit signal ${signal}\n`)
+      ws.send(`\nExit code: ${code}`)
+      ws.send(`\nExit signal: ${signal}\n`)
     }
   })
 }

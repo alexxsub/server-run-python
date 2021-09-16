@@ -1,23 +1,25 @@
 <template>
   <q-page padding>
       <div class="row">
-          <div class="col-3">
+          <div class="col-2">
     <q-input v-model="a" label="A" />
     </div>
     <div class="col-1"></div>
-    <div class="col-3">
+    <div class="col-2">
     <q-input v-model="b" label="B" />
     </div>
-    <div class col-1>
-        <q-toggle
-      label="WebSocket"
-      v-model="websocket"
-    />
-    </div>
+
     <div class="col-1"></div>
     <div class="col-2">
-    <q-btn id="btnRun" color="primary" :label="$t('run')" @click="onRun" />
+    <q-btn id="btnHTTP" color="primary" label="HTTP" @click="onHTTP" />
     </div>
+    <div class="col-2">
+    <q-btn id="btnWS" color="primary" label="WS" @click="onWS" />
+    </div>
+    <div class="col-2">
+    <q-btn id="btnSSE" color="primary" label="SSE" @click="onSSE" />
+    </div>
+
 </div>
      <pre id="output" class="output" >... hit the button and wait for output ...</pre>
   </q-page>
@@ -26,8 +28,35 @@
 <script>
 import { CHECK_ACCESS } from 'src/queries'
 /* global $ */
+function runSSE (a, b) {
+  $('#output').empty()
+  $('#output').show()
+  if (!window.EventSource) {
+    // Internet Explorer или устаревшие браузеры
+    appendWSText('\nServer-sent event not supported')
 
-function runSync (a, b) {
+    return false
+  }
+  const eventSource = new EventSource(`http://localhost:4001/sse?a=${a}&b=${b}`, {
+    withCredentials: true
+  })
+  eventSource.onopen = function (e) {
+    appendWSText('\nEvent sourse opened')
+  }
+
+  eventSource.addEventListener('done', function (e) {
+    appendWSText(`\nDone ${e.data}`)
+    eventSource.close()
+  })
+  eventSource.addEventListener('error', function (e) {
+    appendWSText(`\nError ${e.data}`)
+    eventSource.close()
+  })
+  eventSource.onmessage = function (e) {
+    appendWSText(`\n${e.data}`)
+  }
+}
+function runHTTP (a, b) {
   $('#output').empty()
   $('#output').show()
   $('#btnRun').prop('disabled', true)
@@ -43,7 +72,7 @@ function runSync (a, b) {
       $('#btnRun').prop('disabled', false)
     })
 }
-function runWebsocket (a, b) {
+function runWS (a, b) {
   $('#output').empty()
   $('#output').show()
 
@@ -69,7 +98,7 @@ function openConnection (cb) {
   if (conn.readyState === undefined || conn.readyState > 1) {
     conn = new WebSocket('ws://localhost:4001/')
     conn.onopen = function () {
-      appendWSText('\nSocket open')
+      appendWSText('\nSocket opened. ')
       if (typeof cb === 'function') {
         cb(conn)
       }
@@ -87,7 +116,7 @@ function openConnection (cb) {
 }
 
 if (window.WebSocket === undefined) {
-  appendWSText('\nSockets not supported')
+  appendWSText('\nWebSockets not supported')
 } else {
   openConnection()
 }
@@ -96,8 +125,7 @@ export default {
   data () {
     return {
       a: '',
-      b: '',
-      websocket: false
+      b: ''
     }
   },
   apollo: {
@@ -107,8 +135,14 @@ export default {
     }
   },
   methods: {
-    onRun () {
-      if (this.websocket) { runWebsocket(this.a, this.b) } else { runSync(this.a, this.b) }
+    onWS () {
+      runWS(this.a, this.b)
+    },
+    onHTTP () {
+      runHTTP(this.a, this.b)
+    },
+    onSSE () {
+      runSSE(this.a, this.b)
     }
   }
 }
